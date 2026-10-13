@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A self-contained 8085 assembly syntax analyzer for engineering students.">
+  <meta name="theme-color" content="#16385e">
+  <title>8085 Assembly Code Analyzer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --navy: #16385e;
+      --navy-dark: #102b49;
+      --ink: #1a304b;
+      --muted: #718096;
+      --line: #dce5ec;
+      --teal: #438b91;
+      --paper: #fff;
+      --surface: #f3f7fa;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: #f3f7fa;
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.5;
+    }
+    button, textarea { font: inherit; }
+    button, a, textarea { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, textarea:focus-visible, summary:focus-visible {
+      outline: 3px solid #398e9b70;
+      outline-offset: 3px;
+    }
+    a { color: inherit; }
+    .container { width: min(100% - 40px, 1180px); margin-inline: auto; }
+    .topbar {
+      position: sticky; top: 0; z-index: 5;
+      height: 68px; display: flex; align-items: center;
+      border-bottom: 1px solid #dce5ed; background: #fffffff0;
+      backdrop-filter: blur(12px);
+    }
+    .nav { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    .brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; }
+    .brand-icon {
+      display: grid; width: 38px; height: 38px; place-items: center;
+      border-radius: 11px; background: linear-gradient(145deg,#1b456f,#122e50);
+      color: white; font-size: 19px; box-shadow: 0 5px 12px #14375b2e;
+    }
+    .brand-name { display: block; font-size: 13px; font-weight: 850; letter-spacing: -.03em; }
+    .brand-sub { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+    .nav-links { display: flex; align-items: center; gap: 20px; }
+    .nav-links a { color: #52647a; font-size: 12px; font-weight: 750; text-decoration: none; }
+    .nav-links a:hover { color: var(--navy); }
+    .client-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid #dce7eb; border-radius: 99px; background: #f4faf9; color: #397e7d; font-size: 10px; font-weight: 750; }
+    .client-pill::before { width: 7px; height: 7px; border-radius: 50%; background: #4d9c8e; content: ""; }
+    .hero {
+      position: relative; overflow: hidden; background-color: var(--navy); color: white;
+      background-image: linear-gradient(#ffffff09 1px,transparent 1px),linear-gradient(90deg,#ffffff09 1px,transparent 1px);
+      background-size: 32px 32px;
+    }
+    .hero::after {
+      position: absolute; top: -190px; right: -70px; width: 440px; height: 440px;
+      border: 1px solid #ffffff16; border-radius: 50%; box-shadow: 0 0 0 55px #ffffff09,0 0 0 110px #ffffff06;
+      content: ""; pointer-events: none;
+    }
+    .hero-inner { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0,1fr) 290px; align-items: center; gap: 48px; padding-block: 58px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #ffffff24; border-radius: 99px; background: #ffffff0d; color: #b6d7dd; font-size: 9px; font-weight: 850; letter-spacing: .15em; text-transform: uppercase; }
+    h1 { margin: 20px 0 13px; font-size: clamp(36px,5.6vw,58px); line-height: 1.05; letter-spacing: -.055em; }
+    h1 span { display: block; color: #75c5c3; }
+    .hero-copy { max-width: 650px; margin: 0; color: #d0dce8; font-size: 14px; line-height: 1.8; }
+    .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 24px; }
+    .hero-button { display: inline-flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 17px; border-radius: 9px; background: #f4f8fa; color: var(--navy); font-size: 11px; font-weight: 850; text-decoration: none; transition: background .18s, transform .18s; }
+    .hero-button:hover { transform: translateY(-1px); background: white; }
+    .hero-note { color: #b8c8d7; font-size: 10px; }
+    .flow-card { padding: 19px; border: 1px solid #ffffff22; border-radius: 16px; background: #0e2a49b8; box-shadow: 0 20px 60px #04132430; }
+    .flow-heading { margin: 0 0 17px; color: #d7e5ec; font-size: 11px; font-weight: 800; }
+    .flow-item { display: flex; gap: 10px; padding: 9px 0; }
+    .flow-number { display: grid; width: 26px; height: 26px; flex: 0 0 26px; place-items: center; border: 1px solid #6a9da870; border-radius: 50%; background: #1b4965; color: #b6e1df; font: 10px var(--mono); }
+    .flow-item strong { display: block; color: #f0f5f7; font-size: 10px; }
+    .flow-item small { display: block; margin-top: 3px; color: #9eb2c3; font-size: 9px; }
+    .hero-strip { border-top: 1px solid #ffffff1a; background: #102f5180; }
+    .strip-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 25px; padding-block: 12px; color: #b9cbd8; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .section { padding-block: 48px; }
+    .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 18px; }
+    .section-kicker { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; color: var(--teal); font-size: 9px; font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
+    .section-kicker::before { width: 18px; height: 1px; background: var(--teal); content: ""; }
+    h2 { margin: 0; color: var(--ink); font-size: clamp(22px,3vw,29px); line-height: 1.2; letter-spacing: -.045em; }
+    .section-intro { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+    .local-note { display: inline-flex; align-items: center; gap: 7px; color: #728197; font-size: 10px; font-weight: 650; }
+    .local-note::before { width: 7px; height: 7px; border-radius: 50%; background: #5caa91; content: ""; }
+    .examples { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+    .example {
+      display: flex; align-items: flex-start; gap: 10px; min-height: 72px; padding: 12px;
+      border: 1px solid var(--line); border-radius: 12px; background: var(--paper);
+      color: var(--ink); text-align: left; cursor: pointer; transition: border-color .15s,transform .15s,box-shadow .15s;
+    }
+    .example:hover { transform: translateY(-2px); border-color: #a9c6cb; box-shadow: 0 8px 18px #1c3a540f; }
+    .example[aria-pressed="true"] { border-color: var(--teal); background: #eff8f7; box-shadow: 0 0 0 2px #438b911c; }
+    .example-glyph { display: grid; width: 29px; height: 29px; flex: 0 0 29px; place-items: center; border-radius: 9px; background: #edf3f7; color: #315673; font: 700 11px var(--mono); }
+    .example-title { display: block; font-size: 10px; font-weight: 850; line-height: 1.35; }
+    .example-desc { display: block; margin-top: 4px; color: #7b8999; font-size: 9px; line-height: 1.45; }
+    .workbench { display: grid; grid-template-columns: minmax(0,1.08fr) minmax(350px,.92fr); align-items: start; gap: 14px; }
+    .panel { overflow: hidden; border: 1px solid #d8e2ea; border-radius: 16px; background: var(--paper); box-shadow: 0 10px 30px #203a520e; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid #e3eaf0; }
+    .panel-title { display: flex; align-items: center; gap: 10px; }
+    .panel-icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; background: #eaf2f6; color: #315e7c; font-size: 14px; }
+    .panel-title h3 { margin: 0; color: #223851; font-size: 11px; font-weight: 850; }
+    .panel-title p { margin: 2px 0 0; color: #8996a5; font-size: 9px; }
+    .char-count { border-radius: 5px; background: #f2f6f8; padding: 4px 7px; color: #728297; font: 9px var(--mono); }
+    .editor-wrap { display: flex; min-height: 325px; background: #f9fbfc; }
+    .line-numbers { overflow: hidden; width: 42px; flex: 0 0 42px; padding: 14px 8px 14px 4px; border-right: 1px solid #e9eef2; background: #f3f7f9; color: #9aa8b7; text-align: right; user-select: none; font: 10px/1.8 var(--mono); }
+    .line-numbers div { height: 18px; }
+    textarea {
+      display: block; width: 100%; min-height: 325px; resize: vertical; padding: 14px;
+      border: 0; outline: none; background: transparent; color: #273e56;
+      font: 11px/1.8 var(--mono); tab-size: 4; caret-color: #39a6ae;
+    }
+    textarea::placeholder { color: #8190a3; font: 11px/1.8 var(--sans); }
+    .toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid #e3eaf0; }
+    .tool-group { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+    .button { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 34px; padding: 0 11px; border: 1px solid #d8e2e9; border-radius: 8px; background: white; color: #4d6075; font-size: 10px; font-weight: 800; cursor: pointer; transition: background .15s,border-color .15s,transform .15s; }
+    .button:hover { background: #f3f7f9; border-color: #bfccd6; }
+    .button:active { transform: translateY(1px); }
+    .button-clear { border-color: transparent; color: #758397; }
+    .button-primary { min-height: 38px; padding: 0 15px; border-color: var(--navy); background: #1b456f; color: white; box-shadow: 0 4px 10px #1b456f2b; }
+    .button-primary:hover { border-color: #14385e; background: #14385e; }
+    .shortcut { color: #9aa6b3; font-size: 9px; }
+    .notice { display: none; padding: 9px 15px; border-top: 1px solid #e7ecef; background: #f7fafb; color: #52717e; font-size: 10px; font-weight: 700; }
+    .notice.visible { display: block; }
+    .report-content { min-height: 490px; padding: 18px; }
+    .report-placeholder { display: flex; min-height: 440px; flex-direction: column; justify-content: center; align-items: center; padding: 28px; color: #8391a1; text-align: center; }
+    .placeholder-icon { display: grid; width: 62px; height: 62px; margin-bottom: 18px; place-items: center; border-radius: 20px; background: #eff5f7; color: #477b8c; font-size: 25px; }
+    .report-placeholder strong { color: #30475f; font-size: 13px; }
+    .report-placeholder p { max-width: 255px; margin: 7px 0 0; font-size: 10px; line-height: 1.65; }
+    .placeholder-pill { margin-top: 17px; padding: 5px 10px; border: 1px solid #e1e9ed; border-radius: 99px; background: #fafcfd; color: #718396; font-size: 9px; font-weight: 750; }
+    .stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+    .stat { padding: 10px; border-radius: 10px; background: #f0f6f8; }
+    .stat-label { display: block; color: #718398; font-size: 8px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+    .stat-value { display: block; margin-top: 3px; color: #25486c; font-size: 22px; font-weight: 850; letter-spacing: -.04em; }
+    .stat-errors { background: #fff1ef; }
+    .stat-errors .stat-value { color: #b74c47; }
+    .stat-warnings { background: #fff8e9; }
+    .stat-warnings .stat-value { color: #ad7b2e; }
+    .stat-clean { background: #edf7f2; }
+    .stat-clean .stat-value { color: #397b68; }
+    .report-section { margin-top: 19px; }
+    .report-section-head { display: flex; justify-content: space-between; align-items: center; gap: 9px; margin-bottom: 9px; }
+    .report-section h4 { margin: 0; color: #40566e; font-size: 9px; font-weight: 850; letter-spacing: .11em; text-transform: uppercase; }
+    .report-meta { color: #8996a5; font-size: 9px; }
+    .result-list { display: grid; gap: 7px; max-height: 205px; overflow: auto; padding-right: 2px; }
+    .result-item { padding: 9px 10px; border: 1px solid #e7edf1; border-radius: 8px; background: #fbfcfd; }
+    .result-item-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .mnemonic { color: #285c73; font: 10px var(--mono); }
+    .frequency { padding: 2px 7px; border-radius: 5px; background: #edf3f6; color: #395773; font-size: 9px; font-weight: 850; }
+    .result-explanation { margin: 4px 0 0; color: #788799; font-size: 9px; line-height: 1.5; }
+    .issue { padding: 10px; border: 1px solid #f1d5d2; border-radius: 8px; background: #fff8f7; }
+    .issue.warning { border-color: #f0e4cb; background: #fffbf3; }
+    .issue-head { color: #a74440; font-size: 10px; font-weight: 850; }
+    .issue.warning .issue-head { color: #936923; }
+    .issue-message,.issue-suggestion { margin: 4px 0 0 20px; color: #4d5f72; font-size: 9px; line-height: 1.55; }
+    .issue-suggestion { color: #768596; }
+    .issue-suggestion strong { color: #5e7488; }
+    .clean-note { display: flex; gap: 9px; padding: 11px; border: 1px solid #d8e9e2; border-radius: 10px; background: #f3f9f6; color: #376b58; }
+    .clean-note strong { font-size: 10px; }
+    .clean-note p { margin: 3px 0 0; color: #6f8a7e; font-size: 9px; line-height: 1.5; }
+    .static-note { margin: 16px 0 0; padding-top: 11px; border-top: 1px solid #e9eef2; color: #8592a0; font-size: 9px; line-height: 1.6; }
+    .reference { border-block: 1px solid #dce5eb; background: #eaf1f5; }
+    .reference-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 35px; padding-block: 48px; }
+    .reference-copy p { max-width: 410px; color: #6d7f92; font-size: 11px; line-height: 1.75; }
+    .scope-card { margin-top: 19px; padding: 13px; border: 1px solid #d7e2e7; border-radius: 11px; background: #ffffffbf; }
+    .scope-card strong { display: block; color: #35516b; font-size: 10px; }
+    .scope-card span { display: block; margin-top: 4px; color: #78899a; font-size: 9px; }
+    .reference-card { padding: 16px; border: 1px solid #d8e2e9; border-radius: 15px; background: white; }
+    .reference-card-head { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #e8edf1; }
+    .reference-card-head strong { font-size: 10px; }
+    .reference-card-head span { color: #8492a0; font-size: 9px; }
+    .support-list { display: grid; gap: 6px; margin: 13px 0 17px; padding: 0; list-style: none; }
+    .support-list li { color: #587087; font-size: 9px; }
+    .support-list li::before { margin-right: 7px; color: #4c9185; content: "✓"; font-weight: 900; }
+    .mnemonic-list { display: flex; flex-wrap: wrap; gap: 5px; }
+    .mnemonic-chip { padding: 3px 6px; border: 1px solid #e3eaf0; border-radius: 5px; background: #f8fafb; color: #46637a; font: 8px var(--mono); }
+    .reference-foot { margin-top: 13px; padding-top: 11px; border-top: 1px solid #e8edf1; color: #8492a0; font-size: 9px; line-height: 1.6; }
+    footer { background: var(--navy); color: #d3dfe8; }
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding-block: 17px; }
+    .footer-inner strong { font-size: 10px; }
+    .footer-inner small { display: block; margin-top: 2px; color: #9db2c3; font-size: 8px; }
+    .footer-inner a { color: #c6d6e1; font-size: 9px; font-weight: 750; text-decoration: none; }
+    @media (max-width: 900px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .flow-card { display: none; }
+      .examples { grid-template-columns: repeat(3,minmax(0,1fr)); }
+      .workbench { grid-template-columns: 1fr; }
+      .report-content { min-height: auto; }
+      .report-placeholder { min-height: 270px; }
+      .reference-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .container { width: min(100% - 28px,1180px); }
+      .topbar { height: 60px; }
+      .nav-links { gap: 10px; }
+      .nav-links a { font-size: 10px; }
+      .client-pill { display: none; }
+      .hero-inner { padding-block: 43px; }
+      .hero-copy { font-size: 12px; }
+      .section { padding-block: 35px; }
+      .section-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .examples { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .example { min-height: 77px; padding: 9px; }
+      .editor-wrap { min-height: 290px; }
+      textarea { min-height: 290px; padding: 12px 9px; font-size: 10px; }
+      .line-numbers { width: 34px; flex-basis: 34px; padding-right: 6px; }
+      .toolbar { align-items: stretch; }
+      .tool-group { width: 100%; }
+      .button-primary { width: 100%; }
+      .shortcut { display: none; }
+      .reference-grid { padding-block: 36px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav">
+      <a class="brand" href="#top" aria-label="8085 Analyzer home">
+        <span class="brand-icon" aria-hidden="true">▦</span>
+        <span><span class="brand-name">8085 Analyzer</span><span class="brand-sub">Assembly workbench</span></span>
+      </a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="#workbench">Workbench</a>
+        <a href="#reference">Syntax reference</a>
+        <span class="client-pill">Client-side analysis</span>
+      </nav>
+    </div>
+  </header>
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-inner">
+        <div>
+          <span class="eyebrow">⌁ &nbsp; Pre-simulator code review</span>
+          <h1>Read your code<span>before it runs.</span></h1>
+          <p class="hero-copy">Check 8085 assembly syntax, review instruction usage, and catch common issues before opening GNU SIM 8085.</p>
+          <div class="hero-actions">
+            <a class="hero-button" href="#workbench">Open workbench <span aria-hidden="true">↓</span></a>
+            <span class="hero-note">No upload. No execution. Just useful feedback.</span>
+          </div>
+        </div>
+        <aside class="flow-card" aria-label="Review steps">
+          <p class="flow-heading">Review flow</p>
+          <div class="flow-item"><span class="flow-number">01</span><span><strong>Paste or select a program</strong><small>Your code stays in this browser</small></span></div>
+          <div class="flow-item"><span class="flow-number">02</span><span><strong>Inspect syntax feedback</strong><small>Issues and instruction breakdown</small></span></div>
+          <div class="flow-item"><span class="flow-number">03</span><span><strong>Test separately in GNU SIM</strong><small>Execution happens in your simulator</small></span></div>
+        </aside>
+      </div>
+      <div class="hero-strip"><div class="container strip-inner"><span>Static syntax review</span><span>Instruction frequency</span><span>Actionable feedback</span><span>A learning aid — not an emulator</span></div></div>
+    </section>
+
+    <section class="container section" id="workbench">
+      <div class="section-heading">
+        <div><div class="section-kicker">Analysis desk</div><h2>Your 8085 workbench</h2><p class="section-intro">Review assembly source with clear, line-by-line feedback.</p></div>
+        <span class="local-note">Analysis runs locally in your browser</span>
+      </div>
+      <div class="examples" id="examples" aria-label="Sample 8085 programs"></div>
+      <div class="workbench">
+        <section class="panel" aria-labelledby="editor-heading">
+          <div class="panel-head">
+            <div class="panel-title"><span class="panel-icon" aria-hidden="true">&lt;/&gt;</span><span><h3 id="editor-heading">Assembly source</h3><p>8085 instruction set · text only</p></span></div>
+            <span class="char-count" id="char-count">0 chars</span>
+          </div>
+          <div class="editor-wrap">
+            <div class="line-numbers" id="line-numbers" aria-hidden="true"><div>01</div></div>
+            <textarea id="source-editor" aria-label="8085 assembly source code" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="; Paste your 8085 assembly program here&#10;; or choose one of the examples above&#10;&#10;START:  MVI A, 05H&#10;        MVI B, 03H&#10;        ADD B&#10;        HLT"></textarea>
+          </div>
+          <div class="toolbar">
+            <div class="tool-group">
+              <button type="button" class="button" id="copy-button"><span aria-hidden="true">▢</span><span id="copy-label">Copy code</span></button>
+              <button type="button" class="button button-clear" id="clear-button"><span aria-hidden="true">×</span>Clear</button>
+              <span class="shortcut">Ctrl + Enter to analyze</span>
+            </div>
+            <button type="button" class="button button-primary" id="analyze-button"><span aria-hidden="true">▶</span>Analyze code</button>
+          </div>
+          <div class="notice" id="notice" role="status" aria-live="polite"></div>
+        </section>
+        <section class="panel" id="analysis-results" aria-labelledby="report-heading">
+          <div class="panel-head">
+            <div class="panel-title"><span class="panel-icon" aria-hidden="true">☷</span><span><h3 id="report-heading">Analysis report</h3><p id="report-subtitle">Feedback appears here after analysis</p></span></div>
+            <button type="button" class="button" id="reset-button" aria-label="Reset analysis" hidden>Reset</button>
+          </div>
+          <div class="report-content" id="report-content">
+            <div class="report-placeholder"><span class="placeholder-icon" aria-hidden="true">⌘</span><strong>Ready when you are</strong><p>Add source code or load an example, then analyze it to see instruction counts and syntax feedback.</p><span class="placeholder-pill">No program execution here</span></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="reference" id="reference">
+      <div class="container reference-grid">
+        <div class="reference-copy">
+          <div class="section-kicker">Reference</div><h2>Know what is in scope.</h2>
+          <p>Syntax checks follow the analyzer’s documented support. This is a learning companion for reviewing source, not a replacement for assembling and running it in a simulator.</p>
+          <div class="scope-card"><strong>Check, then simulate</strong><span>Use GNU SIM 8085 separately to assemble and test runtime behavior.</span></div>
+        </div>
+        <div class="reference-card">
+          <div class="reference-card-head"><span><strong>Supported syntax</strong><br>From the analyzer documentation</span><span id="support-count"></span></div>
+          <ul class="support-list" id="support-list"></ul>
+          <div class="report-section-head"><h4>Supported instruction names</h4><span class="report-meta" id="mnemonic-count"></span></div>
+          <div class="mnemonic-list" id="mnemonic-list" aria-label="Supported 8085 instruction names"></div>
+          <p class="reference-foot">Static review only. These checks do not verify program logic or guarantee successful assembly in every environment. Test execution separately in GNU SIM 8085.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer><div class="container footer-inner"><div><strong>8085 Assembly Code Analyzer</strong><small>College mini-project · Client-side source review</small></div><a href="#top">Back to top ↑</a></div></footer>
+
+  <script>
+  "use strict";
+  const EXPLANATIONS = {
+    MOV:"Copies the value from the source register or memory location to the destination.",
+    MVI:"Loads an 8-bit immediate value into a register or memory location.",
+    LXI:"Loads a 16-bit immediate value into a register pair or the stack pointer.",
+    LDA:"Loads the accumulator from a direct 16-bit memory address.",
+    STA:"Stores the accumulator at a direct 16-bit memory address.",
+    LHLD:"Loads the HL register pair from two consecutive memory locations.",
+    SHLD:"Stores the HL register pair in two consecutive memory locations.",
+    LDAX:"Loads the accumulator from the memory address held in BC or DE.",
+    STAX:"Stores the accumulator at the memory address held in BC or DE.",
+    XCHG:"Exchanges the contents of the DE and HL register pairs.",
+    XTHL:"Exchanges HL with the two bytes at the top of the stack.",
+    SPHL:"Copies the HL pair into the stack pointer.",
+    PCHL:"Copies HL into the program counter, changing the next instruction address.",
+    INR:"Increments an 8-bit register or memory value by one.",
+    DCR:"Decrements an 8-bit register or memory value by one.",
+    INX:"Increments a register pair or the stack pointer by one.",
+    DCX:"Decrements a register pair or the stack pointer by one.",
+    ADD:"Adds a register or memory value to the accumulator.",
+    ADC:"Adds a register or memory value and the carry flag to the accumulator.",
+    SUB:"Subtracts a register or memory value from the accumulator.",
+    SBB:"Subtracts a register or memory value and the borrow (carry) from the accumulator.",
+    DAA:"Adjusts the accumulator to a valid packed-BCD result after an addition.",
+    ANA:"Performs a bitwise AND between the accumulator and a register or memory value.",
+    XRA:"Performs a bitwise XOR between the accumulator and a register or memory value.",
+    ORA:"Performs a bitwise OR between the accumulator and a register or memory value.",
+    CMP:"Compares a register or memory value with the accumulator by updating flags.",
+    ADI:"Adds an 8-bit immediate value to the accumulator.",
+    ACI:"Adds an 8-bit immediate value and the carry flag to the accumulator.",
+    SUI:"Subtracts an 8-bit immediate value from the accumulator.",
+    SBI:"Subtracts an 8-bit immediate value and the borrow from the accumulator.",
+    ANI:"Performs a bitwise AND between the accumulator and an 8-bit immediate value.",
+    XRI:"Performs a bitwise XOR between the accumulator and an 8-bit immediate value.",
+    ORI:"Performs a bitwise OR between the accumulator and an 8-bit immediate value.",
+    CPI:"Compares an 8-bit immediate value with the accumulator by updating flags.",
+    DAD:"Adds a register pair to HL.",
+    RLC:"Rotates the accumulator left; bit 7 also moves into the carry flag.",
+    RRC:"Rotates the accumulator right; bit 0 also moves into the carry flag.",
+    RAL:"Rotates the accumulator left through the carry flag.",
+    RAR:"Rotates the accumulator right through the carry flag.",
+    CMA:"Complements every bit in the accumulator.",
+    CMC:"Complements (toggles) the carry flag.",
+    STC:"Sets the carry flag.",
+    JMP:"Jumps to the specified address or label.",
+    JNZ:"Jumps when the zero flag is clear.",
+    JZ:"Jumps when the zero flag is set.",
+    JNC:"Jumps when the carry flag is clear.",
+    JC:"Jumps when the carry flag is set.",
+    JPO:"Jumps when the parity flag indicates odd parity.",
+    JPE:"Jumps when the parity flag indicates even parity.",
+    JP:"Jumps when the sign flag indicates a positive result.",
+    JM:"Jumps when the sign flag indicates a negative result.",
+    CALL:"Calls a subroutine at the specified address or label.",
+    CNZ:"Calls a subroutine when the zero flag is clear.",
+    CZ:"Calls a subroutine when the zero flag is set.",
+    CNC:"Calls a subroutine when the carry flag is clear.",
+    CC:"Calls a subroutine when the carry flag is set.",
+    CPO:"Calls a subroutine when the parity flag indicates odd parity.",
+    CPE:"Calls a subroutine when the parity flag indicates even parity.",
+    CP:"Calls a subroutine when the sign flag indicates a positive result.",
+    CM:"Calls a subroutine when the sign flag indicates a negative result.",
+    RET:"Returns from a subroutine using the address stored on the stack.",
+    RNZ:"Returns when the zero flag is clear.",
+    RZ:"Returns when the zero flag is set.",
+    RNC:"Returns when the carry flag is clear.",
+    RC:"Returns when the carry flag is set.",
+    RPO:"Returns when the parity flag indicates odd parity.",
+    RPE:"Returns when the parity flag indicates even parity.",
+    RP:"Returns when the sign flag indicates a positive result.",
+    RM:"Returns when the sign flag indicates a negative result.",
+    PUSH:"Pushes a register pair or the processor status word onto the stack.",
+    POP:"Pops two bytes from the stack into a register pair or processor status word.",
+    RST:"Calls one of the eight restart vectors (0 through 7).",
+    NOP:"Does nothing for one instruction cycle.",
+    HLT:"Halts processor execution.",
+    EI:"Enables maskable interrupts.",
+    DI:"Disables maskable interrupts.",
+    SIM:"Uses accumulator bits to set interrupt masks or serial output.",
+    RIM:"Reads interrupt masks, pending interrupts, and serial input into the accumulator.",
+    IN:"Reads one byte from the specified 8-bit I/O port into the accumulator.",
+    OUT:"Writes the accumulator to the specified 8-bit I/O port."
+  };
+  const SUPPORTED_MNEMONICS = Object.keys(EXPLANATIONS).sort();
+  const SYNTAX_SUPPORT = [
+    "8085 mnemonics are case-insensitive; one instruction is allowed per line.",
+    "Registers: A, B, C, D, E, H, L, and M (the memory byte addressed by HL).",
+    "Pairs: BC, DE, HL, and SP; PUSH/POP also accept PSW.",
+    "Operands are comma-separated. A semicolon starts a comment.",
+    "Labels use LABEL: on a line; branch and call targets may be labels or 16-bit addresses.",
+    "Numbers may be decimal, 0x-prefixed hex, H-suffixed hex, or B-suffixed binary.",
+    "ORG address and END are the supported assembler directives. They are not counted as instructions.",
+    "IN and OUT accept one numeric 8-bit I/O port address.",
+    "The analyzer checks syntax only; it does not assemble or execute code."
+  ];
+  const PROGRAM_EXAMPLES = [
+    {id:"addition",title:"Add two numbers",category:"Arithmetic",description:"Adds 25H and 17H, then stores the 8-bit result at 2050H.",glyph:"+",code:"; Add two 8-bit numbers\n        MVI A, 25H\n        MVI B, 17H\n        ADD B\n        STA 2050H\n        HLT"},
+    {id:"subtraction",title:"Subtract two numbers",category:"Arithmetic",description:"Subtracts 12H from 2AH and stores the result at 2051H.",glyph:"−",code:"; Subtract B from A\n        MVI A, 2AH\n        MVI B, 12H\n        SUB B\n        STA 2051H\n        HLT"},
+    {id:"multiplication",title:"Multiply by repeated addition",category:"Loop",description:"Calculates 05H x 04H by adding five four times.",glyph:"×",code:"; Product = 05H x 04H\n        MVI A, 00H\n        MVI B, 05H\n        MVI C, 04H\nLOOP:   ADD B\n        DCR C\n        JNZ LOOP\n        STA 2052H\n        HLT"},
+    {id:"division",title:"Divide by repeated subtraction",category:"Loop",description:"Divides 14H by 04H; B holds the quotient and A the remainder.",glyph:"÷",code:"; Divide 14H by 04H\n        MVI A, 14H\n        MVI C, 04H\n        MVI B, 00H\nLOOP:   CMP C\n        JC DONE\n        SUB C\n        INR B\n        JMP LOOP\nDONE:   STA 2053H\n        MOV A, B\n        STA 2054H\n        HLT"},
+    {id:"largest",title:"Find the largest number",category:"Comparison",description:"Compares 32H, 55H, and 41H; stores the largest at 2055H.",glyph:"MAX",code:"; Find the largest of three values\n        MVI A, 32H\n        MVI B, 55H\n        CMP B\n        JNC CHECK_C\n        MOV A, B\nCHECK_C: MVI C, 41H\n        CMP C\n        JNC STORE\n        MOV A, C\nSTORE:  STA 2055H\n        HLT"}
+  ];
+  const REG8 = new Set(["A","B","C","D","E","H","L","M"]);
+  const PAIR = new Set(["B","D","H","SP"]);
+  const STACK_PAIR = new Set(["B","D","H","PSW"]);
+  const BRANCH = new Set(["JMP","JNZ","JZ","JNC","JC","JPO","JPE","JP","JM","CALL","CNZ","CZ","CNC","CC","CPO","CPE","CP","CM"]);
+  const NO_OPERAND = new Set(["XCHG","XTHL","SPHL","PCHL","RLC","RRC","RAL","RAR","CMA","CMC","STC","RET","RNZ","RZ","RNC","RC","RPO","RPE","RP","RM","NOP","HLT","EI","DI","SIM","RIM","DAA"]);
+  const REG_OPERAND = new Set(["INR","DCR","ADD","ADC","SUB","SBB","ANA","XRA","ORA","CMP"]);
+  const PAIR_OPERAND = new Set(["INX","DCX"]);
+  const IMMEDIATE8 = new Set(["ADI","ACI","SUI","SBI","ANI","XRI","ORI","CPI"]);
+  const PORT8 = new Set(["IN","OUT"]);
+  const DIRECT16 = new Set(["LDA","STA","LHLD","SHLD"]);
+  const LABEL_PATTERN = /^[A-Z_][A-Z0-9_]*$/;
+  const $ = (id) => document.getElementById(id);
+  const editor = $("source-editor");
+  let analysisResult = null;
+  let selectedExample = "";
+  let copiedTimer;
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (character) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    })[character]);
+  }
+  function addIssue(issues,line,severity,message,suggestion) {
+    issues.push({line,severity,message,suggestion});
+  }
+  function parseNumber(value) {
+    const text = value.trim().toUpperCase();
+    if (/^0X[0-9A-F]+$/.test(text)) return Number.parseInt(text.slice(2),16);
+    if (/^[0-9A-F]+H$/.test(text)) return Number.parseInt(text.slice(0,-1),16);
+    if (/^[01]+B$/.test(text)) return Number.parseInt(text.slice(0,-1),2);
+    if (/^\d+$/.test(text)) return Number.parseInt(text,10);
+    return undefined;
+  }
+  function expectCount(mnemonic,operands,count,line,issues) {
+    if (operands.length===count && operands.every(Boolean)) return true;
+    const expected=count===0?"no operands":`${count} operand${count===1?"":"s"}`;
+    addIssue(issues,line,"error",`${mnemonic} expects ${expected}; found ${operands.filter(Boolean).length}.`,
+      count===0?`Write ${mnemonic} without an operand.`:`Write ${mnemonic} ${count===2?"destination, source":"operand"} using comma-separated operands.`);
+    return false;
+  }
+  function checkImmediate(value,bits,line,mnemonic,issues) {
+    const parsed=parseNumber(value), max=bits===8?0xff:0xffff;
+    if (parsed===undefined) {
+      addIssue(issues,line,"error",`${mnemonic} expects a numeric ${bits}-bit immediate value; "${value}" is not a supported number.`,
+        `Use a decimal value, 0x-prefixed hex, H-suffixed hex, or B-suffixed binary from 0 to ${max} (${bits===8?"FFH":"FFFFH"}).`);
+      return false;
+    }
+    if (parsed<0 || parsed>max) {
+      addIssue(issues,line,"error",`${mnemonic} value is outside the ${bits}-bit range.`,
+        `Use a value from 0 to ${max} (${bits===8?"FFH":"FFFFH"}).`);
+      return false;
+    }
+    return true;
+  }
+  function checkInstruction(instruction,issues,references) {
+    const {mnemonic,operands,line}=instruction;
+    const count=(expected)=>expectCount(mnemonic,operands,expected,line,issues);
+    if (NO_OPERAND.has(mnemonic)) { count(0); return; }
+    if (mnemonic==="MOV") {
+      if (!count(2)) return;
+      const [destination,source]=operands.map((operand)=>operand.toUpperCase());
+      if (!REG8.has(destination)||!REG8.has(source))
+        addIssue(issues,line,"error","MOV operands must both be 8-bit registers (A, B, C, D, E, H, L, or M).","Use a register at both positions, for example MOV A, B. M means the memory byte at the address in HL.");
+      else if (destination==="M"&&source==="M")
+        addIssue(issues,line,"error","MOV M, M is not a valid 8085 instruction.","Use another register as the source or destination.");
+      return;
+    }
+    if (mnemonic==="MVI") {
+      if (!count(2)) return;
+      if (!REG8.has(operands[0].toUpperCase()))
+        addIssue(issues,line,"error",`MVI destination "${operands[0]}" is not an 8-bit register or M.`,"Use A, B, C, D, E, H, L, or M as the first operand.");
+      else checkImmediate(operands[1],8,line,mnemonic,issues);
+      return;
+    }
+    if (mnemonic==="LXI") {
+      if (!count(2)) return;
+      if (!PAIR.has(operands[0].toUpperCase()))
+        addIssue(issues,line,"error",`LXI destination "${operands[0]}" is not a register pair.`,"Use B (BC), D (DE), H (HL), or SP as the first operand.");
+      else checkImmediate(operands[1],16,line,mnemonic,issues);
+      return;
+    }
+    if (DIRECT16.has(mnemonic)) { if (count(1)) checkImmediate(operands[0],16,line,mnemonic,issues); return; }
+    if (mnemonic==="LDAX"||mnemonic==="STAX") {
+      if (!count(1)) return;
+      if (!["B","D"].includes(operands[0].toUpperCase()))
+        addIssue(issues,line,"error",`${mnemonic} only accepts the BC or DE register pair.`,"Write B for BC or D for DE.");
+      return;
+    }
+    if (REG_OPERAND.has(mnemonic)) {
+      if (!count(1)) return;
+      if (!REG8.has(operands[0].toUpperCase()))
+        addIssue(issues,line,"error",`${mnemonic} expects an 8-bit register or M.`,"Use A, B, C, D, E, H, L, or M.");
+      return;
+    }
+    if (PAIR_OPERAND.has(mnemonic)||mnemonic==="DAD") {
+      if (!count(1)) return;
+      if (!PAIR.has(operands[0].toUpperCase()))
+        addIssue(issues,line,"error",`${mnemonic} expects a register pair or SP.`,"Use B (BC), D (DE), H (HL), or SP.");
+      return;
+    }
+    if (mnemonic==="PUSH"||mnemonic==="POP") {
+      if (!count(1)) return;
+      if (!STACK_PAIR.has(operands[0].toUpperCase()))
+        addIssue(issues,line,"error",`${mnemonic} expects a register pair or PSW.`,"Use B (BC), D (DE), H (HL), or PSW.");
+      return;
+    }
+    if (IMMEDIATE8.has(mnemonic)||PORT8.has(mnemonic)) {
+      if (count(1)) checkImmediate(operands[0],8,line,mnemonic,issues);
+      return;
+    }
+    if (mnemonic==="RST") {
+      if (!count(1)) return;
+      const vector=parseNumber(operands[0]);
+      if (vector===undefined||vector>7)
+        addIssue(issues,line,"error","RST expects a restart number from 0 to 7.","Use RST 0 through RST 7 (or the matching supported numeric notation).");
+      return;
+    }
+    if (BRANCH.has(mnemonic)) {
+      if (!count(1)) return;
+      const target=operands[0].toUpperCase(), numeric=parseNumber(target);
+      if (numeric!==undefined) {
+        if (numeric>0xffff) addIssue(issues,line,"error",`${mnemonic} target exceeds the 16-bit address range.`,"Use an address from 0 to FFFFH.");
+      } else if (LABEL_PATTERN.test(target)) references.push({label:target,line});
+      else addIssue(issues,line,"error",`${mnemonic} target "${operands[0]}" is not a valid label or address.`,"Use a label written as NAME: elsewhere, or a 16-bit numeric address.");
+    }
+  }
+  function analyze8085(source) {
+    const issues=[], instructions=[], labels=new Map(), references=[];
+    const lines=source.split(/\r?\n/);
+    lines.forEach((raw,index)=>{
+      const line=index+1;
+      let text=raw.split(";")[0].trim();
+      if (!text) return;
+      const colon=text.indexOf(":");
+      if (colon>=0) {
+        const label=text.slice(0,colon).trim().toUpperCase();
+        if (!LABEL_PATTERN.test(label)) {
+          addIssue(issues,line,"error",`Label "${text.slice(0,colon).trim()}" is not valid.`,"Start a label with a letter or underscore and use only letters, numbers, and underscores, followed by a colon.");
+          return;
+        }
+        if (labels.has(label)) addIssue(issues,line,"error",`Label "${label}" is defined more than once.`,"Rename this label or remove the duplicate definition.");
+        else labels.set(label,line);
+        text=text.slice(colon+1).trim();
+        if (!text) return;
+      }
+      const match=/^(\S+)(?:\s+(.+))?$/.exec(text);
+      if (!match) return;
+      const mnemonic=match[1].toUpperCase(), operandText=(match[2]||"").trim();
+      const operands=operandText?operandText.split(",").map((operand)=>operand.trim()):[];
+      if (mnemonic==="ORG") {
+        if (operands.length!==1||!operands[0]) addIssue(issues,line,"error","ORG expects one numeric address.","Write ORG followed by one 16-bit address, for example ORG 2000H.");
+        else checkImmediate(operands[0],16,line,mnemonic,issues);
+        return;
+      }
+      if (mnemonic==="END") {
+        if (operands.length>0) addIssue(issues,line,"error","END does not take an operand in this analyzer's supported syntax.","Write END alone or remove the directive.");
+        return;
+      }
+      if (!Object.hasOwn(EXPLANATIONS,mnemonic)) {
+        addIssue(issues,line,"error",`Unsupported instruction or directive "${match[1]}".`,`Check the spelling. This analyzer supports ${SUPPORTED_MNEMONICS.length} listed 8085 mnemonics plus ORG and END; it does not support macros or other assembler directives.`);
+        return;
+      }
+      instructions.push({line,mnemonic,operands});
+      checkInstruction({line,mnemonic,operands},issues,references);
+    });
+    references.forEach(({label,line})=>{
+      if (!labels.has(label)) addIssue(issues,line,"warning",`Label "${label}" is referenced but is not defined in this source.`,`Add a ${label}: label, correct the target name, or confirm it is defined by the assembler environment.`);
+    });
+    const frequency=new Map();
+    instructions.forEach(({mnemonic})=>frequency.set(mnemonic,(frequency.get(mnemonic)||0)+1));
+    const counts=[...frequency.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([mnemonic,count])=>({mnemonic,count,explanation:EXPLANATIONS[mnemonic]}));
+    const order={error:0,warning:1,info:2};
+    issues.sort((a,b)=>a.line-b.line||order[a.severity]-order[b.severity]);
+    return {instructionTotal:instructions.length,counts,issues,analyzedLines:lines.length};
+  }
+  function renderExamples() {
+    $("examples").innerHTML=PROGRAM_EXAMPLES.map((example)=>`
+      <button type="button" class="example" data-example="${example.id}" aria-pressed="false">
+        <span class="example-glyph" aria-hidden="true">${escapeHtml(example.glyph)}</span>
+        <span><span class="example-title">${escapeHtml(example.title)}</span><span class="example-desc">${escapeHtml(example.description)}</span></span>
+      </button>`).join("");
+    $("examples").querySelectorAll("[data-example]").forEach((button)=>{
+      button.addEventListener("click",()=>{
+        const example=PROGRAM_EXAMPLES.find((item)=>item.id===button.dataset.example);
+        if (!example) return;
+        editor.value=example.code;
+        selectedExample=example.id;
+        analysisResult=null;
+        updateEditor();
+        clearReport();
+        $("examples").querySelectorAll("[data-example]").forEach((item)=>item.setAttribute("aria-pressed",String(item.dataset.example===selectedExample)));
+        notify(`${example.title} loaded into the editor.`);
+        $("workbench").scrollIntoView({behavior:"smooth",block:"start"});
+      });
+    });
+  }
+  function updateEditor() {
+    $("char-count").textContent=`${editor.value.length} chars`;
+    const totalLines=editor.value.split(/\r?\n/).length;
+    $("line-numbers").innerHTML=Array.from({length:totalLines},(_,index)=>`<div>${String(index+1).padStart(2,"0")}</div>`).join("");
+  }
+  function notify(message) {
+    const notice=$("notice");
+    notice.textContent=message;
+    notice.classList.add("visible");
+  }
+  function clearNotice() {
+    $("notice").textContent="";
+    $("notice").classList.remove("visible");
+  }
+  function clearReport() {
+    $("report-subtitle").textContent="Feedback appears here after analysis";
+    $("reset-button").hidden=true;
+    $("report-content").innerHTML=`<div class="report-placeholder"><span class="placeholder-icon" aria-hidden="true">⌘</span><strong>Ready when you are</strong><p>Add source code or load an example, then analyze it to see instruction counts and syntax feedback.</p><span class="placeholder-pill">No program execution here</span></div>`;
+  }
+  function renderReport(result) {
+    const errors=result.issues.filter((issue)=>issue.severity==="error").length;
+    const warnings=result.issues.filter((issue)=>issue.severity==="warning").length;
+    const issueClass=errors?"stat-errors":warnings?"stat-warnings":"stat-clean";
+    $("report-subtitle").textContent=`Reviewed at ${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
+    $("reset-button").hidden=false;
+    const countsHtml=result.counts.length?result.counts.map((item)=>`
+      <div class="result-item">
+        <div class="result-item-head"><span class="mnemonic">${escapeHtml(item.mnemonic)}</span><span class="frequency">${item.count}×</span></div>
+        <p class="result-explanation">${escapeHtml(item.explanation)}</p>
+      </div>`).join(""):`<div class="result-item"><p class="result-explanation">No supported instruction names were found in this source.</p></div>`;
+    const feedbackHtml=result.issues.length?result.issues.map((issue)=>`
+      <div class="issue ${issue.severity==="warning"?"warning":""}">
+        <div class="issue-head">${issue.severity==="error"?"Error":"Warning"} · Line ${issue.line}</div>
+        <p class="issue-message">${escapeHtml(issue.message)}</p>
+        <p class="issue-suggestion"><strong>Suggestion:</strong> ${escapeHtml(issue.suggestion)}</p>
+      </div>`).join(""):`<div class="clean-note"><span aria-hidden="true">✓</span><div><strong>No issues reported</strong><p>This source has no feedback from the checks available here. Test program behavior separately in GNU SIM 8085.</p></div></div>`;
+    $("report-content").innerHTML=`
+      <div class="stats">
+        <div class="stat"><span class="stat-label">Instructions</span><span class="stat-value">${result.instructionTotal}</span></div>
+        <div class="stat"><span class="stat-label">Lines reviewed</span><span class="stat-value">${result.analyzedLines}</span></div>
+        <div class="stat ${issueClass}"><span class="stat-label">Issues</span><span class="stat-value">${result.issues.length}</span></div>
+      </div>
+      <section class="report-section"><div class="report-section-head"><h4>Instruction frequency &amp; explanation</h4><span class="report-meta">${result.counts.length} mnemonic${result.counts.length===1?"":"s"}</span></div><div class="result-list">${countsHtml}</div></section>
+      <section class="report-section"><div class="report-section-head"><h4>Error report &amp; suggestions</h4><span class="report-meta">${errors} error${errors===1?"":"s"} · ${warnings} warning${warnings===1?"":"s"}</span></div><div class="result-list">${feedbackHtml}</div></section>
+      <p class="static-note">Static analysis only. This workbench does not execute or emulate instructions.</p>`;
+  }
+  function runAnalysis() {
+    if (!editor.value.trim()) {
+      notify("Add assembly source or choose an example before analyzing.");
+      analysisResult=null;
+      return;
+    }
+    analysisResult=analyze8085(editor.value);
+    renderReport(analysisResult);
+    clearNotice();
+    $("analysis-results").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }
+  async function copyCode() {
+    if (!editor.value) { notify("There is no source code to copy yet."); return; }
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(editor.value);
+      else {
+        editor.focus();
+        editor.select();
+        if (!document.execCommand("copy")) throw new Error("Copy command failed");
+        editor.setSelectionRange(editor.value.length,editor.value.length);
+      }
+      $("copy-label").textContent="Copied";
+      notify("Source copied to clipboard.");
+      clearTimeout(copiedTimer);
+      copiedTimer=setTimeout(()=>{$("copy-label").textContent="Copy code";},1800);
+    } catch {
+      notify("Clipboard access is unavailable in this browser.");
+    }
+  }
+  function resetEditor() {
+    editor.value="";
+    selectedExample="";
+    analysisResult=null;
+    $("examples").querySelectorAll("[data-example]").forEach((button)=>button.setAttribute("aria-pressed","false"));
+    updateEditor();
+    clearReport();
+    notify("Editor cleared. Start with your own code or choose an example.");
+    editor.focus();
+  }
+  editor.addEventListener("input",()=>{
+    selectedExample="";
+    analysisResult=null;
+    $("examples").querySelectorAll("[data-example]").forEach((button)=>button.setAttribute("aria-pressed","false"));
+    updateEditor();
+    clearReport();
+    clearNotice();
+  });
+  editor.addEventListener("scroll",()=>{$("line-numbers").scrollTop=editor.scrollTop;});
+  editor.addEventListener("keydown",(event)=>{
+    if (event.key==="Tab") {
+      event.preventDefault();
+      const start=editor.selectionStart,end=editor.selectionEnd;
+      editor.setRangeText("  ",start,end,"end");
+      updateEditor();
+    }
+    if ((event.ctrlKey||event.metaKey)&&event.key==="Enter") { event.preventDefault(); runAnalysis(); }
+  });
+  $("analyze-button").addEventListener("click",runAnalysis);
+  $("copy-button").addEventListener("click",copyCode);
+  $("clear-button").addEventListener("click",resetEditor);
+  $("reset-button").addEventListener("click",()=>{analysisResult=null;clearReport();});
+  $("support-list").innerHTML=SYNTAX_SUPPORT.map((item)=>`<li>${escapeHtml(item)}</li>`).join("");
+  $("support-count").textContent=`${SYNTAX_SUPPORT.length} rules`;
+  $("mnemonic-count").textContent=`${SUPPORTED_MNEMONICS.length} mnemonics`;
+  $("mnemonic-list").innerHTML=SUPPORTED_MNEMONICS.map((name)=>`<span class="mnemonic-chip">${escapeHtml(name)}</span>`).join("");
+  renderExamples();
+  updateEditor();
+  </script>
+</body>
+</html>
